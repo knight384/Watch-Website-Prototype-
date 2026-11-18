@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Haldor &amp; Vey — Atelier Watch House</title>
+  <meta name="description" content="One-screen interactive product viewer for the fictional Haldor & Vey watch house.">
+
+  <!-- Preload hero plate and initial watch PNG to prevent layout shift -->
+  <link rel="preload" as="image" href="assets/hero-plate.jpg">
+  <link rel="preload" as="image" href="assets/watch-nacre-05.png">
+
+  <!-- Google Fonts: Newsreader (400, 400i, 500) and Nunito Sans (400, 600, 700) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,600;0,6..12,700&display=swap" rel="stylesheet">
+
+  <!-- Three.js 0.170.0 Import Map pinned to jsDelivr -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Background Layers in exact specified order:
+       1. hero-plate
+       2. plum-cast
+       3. top-shade
+       4. lower-shade
+       5. webgl-canvas
+       6. ground-bloom
+       7. static-grain
+       8. HTML interface -->
+
+  <!-- 1. hero-plate with automatic poster fallback -->
+  <img id="bg-hero-plate" class="layer-hero-plate" src="assets/hero-plate.jpg" alt="" aria-hidden="true"
+       onerror="if (this.src.indexOf('poster.jpg') === -1) { this.src = 'assets/poster.jpg'; }">
+
+  <!-- 2. plum-cast -->
+  <div class="layer-plum-cast" aria-hidden="true"></div>
+
+  <!-- 3. top-shade -->
+  <div class="layer-top-shade" aria-hidden="true"></div>
+
+  <!-- 4. lower-shade -->
+  <div class="layer-lower-shade" aria-hidden="true"></div>
+
+  <!-- 5. webgl-canvas -->
+  <canvas id="webgl-canvas" class="layer-webgl-canvas" aria-label="Interactive watch viewer"></canvas>
+
+  <!-- 6. ground-bloom -->
+  <div id="ground-bloom" class="layer-ground-bloom" aria-hidden="true"></div>
+
+  <!-- 7. static-grain (monochrome grain at .038 opacity) -->
+  <div class="layer-static-grain" aria-hidden="true"></div>
+
+  <!-- 8. HTML Interface -->
+  <div class="app-root">
+
+    <!-- Exit Expanded Viewer floating control (visible only in focus mode) -->
+    <button type="button" id="exit-focus-btn" class="exit-focus-control" aria-label="Exit expanded viewer" tabindex="-1">
+      <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
+      <span>Exit expanded viewer</span>
+    </button>
+
+    <!-- Accessible Polite Live Region -->
+    <div id="accessible-announcer" class="sr-only" aria-live="polite" aria-atomic="true">
+      Nacre No. 05 selected
+    </div>
+
+    <!-- LEFT RAIL (196px) -->
+    <nav class="left-rail" aria-label="Primary Navigation">
+      <div class="brand-block">
+        <a href="#home" class="brand-link" aria-label="Haldor &amp; Vey Home">
+          <span class="brand-wordmark">Haldor &amp; Vey</span>
+        </a>
+      </div>
+
+      <ul class="nav-list" role="list">
+        <li class="nav-item">
+          <a href="#home" class="nav-link">
+            <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            <span class="nav-label">Home</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#selected" class="nav-link is-selected" aria-current="page">
+            <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <span class="nav-label">Selected</span>
+            <span class="nav-count">06</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#dress" class="nav-link">
+            <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><polyline points="12 9 12 12 13.5 13.5"/><path d="M16.51 17.35l-.35 3.83a2 2 0 0 1-2 1.82H9.83a2 2 0 0 1-2-1.82l-.35-3.83m.01-10.7l.35-3.83A2 2 0 0 1 9.83 1h4.35a2 2 0 0 1 2 1.82l.35 3.83"/></svg>
+            <span class="nav-label">Dress</span>
+            <span class="nav-count">08</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#field" class="nav-link">
+            <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
+            <span class="nav-label">Field</span>
+            <span class="nav-count">05</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#pilot" class="nav-link">
+            <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
+            <span class="nav-label">Pilot</span>
+            <span class="nav-count">04</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#chronographs" class="nav-link">
+            <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span class="nav-label">Chronographs</span>
+            <span class="nav-count">07</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#small-seconds" class="nav-link">
+            <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="15" r="4"/><line x1="12" y1="15" x2="14" y2="14"/></svg>
+            <span class="nav-label">Small Seconds</span>
+            <span class="nav-count">05</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#calendars" class="nav-link">
+            <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+            <span class="nav-label">Calendars</span>
+            <span class="nav-count">03</span>
+          </a>
+        </li>
+      </ul>
+
+      <!-- Featured Card Anchored at Left Rail Bottom -->
+      <aside class="featured-card" aria-label="Atelier Note">
+        <span class="featured-eyebrow">ATELIER NOTE</span>
+        <div class="featured-thumb-wrap">
+          <img src="assets/watch-nacre-05.png" alt="" class="featured-cutout" aria-hidden="true" loading="lazy">
+        </div>
+        <p class="featured-title">A dial made for the last light.</p>
+        <hr class="featured-hairline" aria-hidden="true">
+        <a href="#atelier-note" class="featured-action">
+          <span>Read the note &rarr;</span>
+        </a>
+      </aside>
+    </nav>
+
+    <!-- CENTER COLUMN: SELECTOR STRIP + 3D STAGE -->
+    <main class="center-column">
+      <!-- Selector Strip: Six 130px tabs across top -->
+      <section class="selector-section" aria-label="Watch editions">
+        <div class="selector-strip" role="tablist" aria-label="Watch edition tabs">
+          <!-- Tab 1: Serein No. 02 -->
+          <button type="button" role="tab" class="watch-tab" id="tab-serein-02" aria-selected="false" aria-controls="watch-panel" data-edition="serein-02">
+            <img src="assets/watch-serein-02.png" alt="" class="tab-cutout" aria-hidden="true">
+            <div class="tab-meta">
+              <span class="tab-name">Serein No. 02</span>
+              <span class="tab-calibre">calibre H-02</span>
+            </div>
+          </button>
+
+          <!-- Tab 2: Nacre No. 05 (Active at first paint) -->
+          <button type="button" role="tab" class="watch-tab is-active" id="tab-nacre-05" aria-selected="true" aria-controls="watch-panel" data-edition="nacre-05">
+            <img src="assets/watch-nacre-05.png" alt="" class="tab-cutout" aria-hidden="true">
+            <div class="tab-meta">
+              <span class="tab-name">Nacre No. 05</span>
+              <span class="tab-calibre">calibre H-05</span>
+            </div>
+          </button>
+
+          <!-- Tab 3: Orison No. 08 -->
+          <button type="button" role="tab" class="watch-tab" id="tab-orison-08" aria-selected="false" aria-controls="watch-panel" data-edition="orison-08">
+            <img src="assets/watch-orison-08.png" alt="" class="tab-cutout" aria-hidden="true">
+            <div class="tab-meta">
+              <span class="tab-name">Orison No. 08</span>
+              <span class="tab-calibre">calibre H-08</span>
+            </div>
+          </button>
+
+          <!-- Tab 4: Hedra No. 11 -->
+          <button type="button" role="tab" class="watch-tab" id="tab-hedra-11" aria-selected="false" aria-controls="watch-panel" data-edition="hedra-11">
+            <img src="assets/watch-hedra-11.png" alt="" class="tab-cutout" aria-hidden="true">
+            <div class="tab-meta">
+              <span class="tab-name">Hedra No. 11</span>
+              <span class="tab-calibre">calibre H-11</span>
+            </div>
+          </button>
+
+          <!-- Tab 5: Kestrel No. 14 -->
+          <button type="button" role="tab" class="watch-tab" id="tab-kestrel-14" aria-selected="false" aria-controls="watch-panel" data-edition="kestrel-14">
+            <img src="assets/watch-kestrel-14.png" alt="" class="tab-cutout" aria-hidden="true">
+            <div class="tab-meta">
+              <span class="tab-name">Kestrel No. 14</span>
+              <span class="tab-calibre">calibre H-14</span>
+            </div>
+          </button>
+
+          <!-- Tab 6: Vanta No. 17 -->
+          <button type="button" role="tab" class="watch-tab" id="tab-vanta-17" aria-selected="false" aria-controls="watch-panel" data-edition="vanta-17">
+            <img src="assets/watch-vanta-17.png" alt="" class="tab-cutout" aria-hidden="true">
+            <div class="tab-meta">
+              <span class="tab-name">Vanta No. 17</span>
+              <span class="tab-calibre">calibre H-17</span>
+            </div>
+          </button>
+        </div>
+      </section>
+
+      <!-- Stage Area -->
+      <section class="stage-section" id="stage-container" aria-label="Product display stage">
+        <!-- Transparent PNG Fallback in stage if WebGL/model fails -->
+        <div id="stage-fallback-wrap" class="stage-fallback-wrap" aria-hidden="true">
+          <img id="stage-fallback-img" class="stage-fallback-img" src="assets/watch-nacre-05.png" alt="" aria-hidden="true">
+        </div>
+
+        <!-- Stage Left Tool Column -->
+        <div class="stage-tool-column">
+          <span class="stage-study-label" aria-hidden="true">WATCH STUDY</span>
+          
+          <div class="stage-tools-stack" role="toolbar" aria-label="Viewer utilities">
+            <!-- Zoom In: Lighted with accent token -->
+            <button type="button" class="tool-btn tool-zoom-in is-accent" id="btn-zoom-in" aria-label="Zoom in">
+              <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg>
+            </button>
+
+            <!-- Zoom Out -->
+            <button type="button" class="tool-btn" id="btn-zoom-out" aria-label="Zoom out">
+              <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="8" x2="14" y1="11" y2="11"/></svg>
+            </button>
+
+            <!-- Expand viewer -->
+            <button type="button" class="tool-btn" id="btn-expand-viewer" aria-label="Expand viewer" aria-pressed="false">
+              <svg class="icon icon-expand" aria-hidden="true" viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" x2="14" y1="3" y2="10"/><line x1="3" x2="10" y1="21" y2="14"/></svg>
+            </button>
+
+            <!-- Toggle daylight -->
+            <button type="button" class="tool-btn" id="btn-toggle-daylight" aria-label="Toggle daylight" aria-pressed="false">
+              <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" x2="12" y1="1" y2="3"/><line x1="12" x2="12" y1="21" y2="23"/><line x1="4.22" x2="5.64" y1="4.22" y2="5.64"/><line x1="18.36" x2="19.78" y1="18.36" y2="19.78"/><line x1="1" x2="3" y1="12" y2="12"/><line x1="21" x2="23" y1="12" y2="12"/><line x1="4.22" x2="5.64" y1="19.78" y2="18.36"/><line x1="18.36" x2="19.78" y1="5.64" y2="4.22"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Stage Bottom Controls & Captions -->
+        <div class="stage-footer">
+          <!-- Caption -->
+          <p id="stage-caption" class="stage-caption">The rotor catches light, then returns to shadow.</p>
+
+          <!-- Turn control pill -->
+          <div class="turn-control-pill" role="group" aria-label="Rotation controls">
+            <button type="button" class="turn-btn" id="btn-turn-left" aria-label="Turn left">
+              <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            </button>
+            <button type="button" class="turn-center-btn" id="btn-turn-full" aria-label="Full rotation">
+              <span class="turn-label">360&deg;</span>
+            </button>
+            <button type="button" class="turn-btn" id="btn-turn-right" aria-label="Turn right">
+              <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.99 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+            </button>
+          </div>
+
+          <!-- Interaction hint -->
+          <p id="stage-hint" class="stage-hint">Drag to inspect &middot; scroll to alter distance</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- RIGHT RAIL: HEADER BAR + SCROLLABLE DETAIL CARD -->
+    <aside class="right-rail" aria-label="Watch Details">
+      <!-- Search and Header Bar (Outside scrollable detail body) -->
+      <header class="right-header-bar">
+        <div class="search-wrap">
+          <label for="edition-search" class="sr-only">Search editions, calibres, or finishes</label>
+          <svg class="search-icon icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/></svg>
+          <input type="search" id="edition-search" class="search-input" placeholder="Search editions, calibres, or finishes&hellip;">
+        </div>
+
+        <button type="button" class="header-tool-btn" id="btn-notifications" aria-label="Notifications">
+          <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        </button>
+
+        <div class="user-avatar" role="img" aria-label="User profile">
+          <span class="avatar-initials" aria-hidden="true">HV</span>
+        </div>
+      </header>
+
+      <!-- Scrollable Detail Card Body -->
+      <article class="detail-card-body" id="watch-panel" role="tabpanel" aria-labelledby="tab-nacre-05">
+        <!-- Eyebrow -->
+        <div class="detail-block detail-eyebrow-block">
+          <span id="detail-eyebrow" class="detail-eyebrow">SERIES II / AUTOMATIC</span>
+        </div>
+
+        <!-- Title -->
+        <div class="detail-block detail-title-block">
+          <h1 id="detail-title" class="detail-title">Nacre No. 05</h1>
+        </div>
+
+        <!-- Tags -->
+        <div class="detail-block detail-tags-block">
+          <div id="detail-tags" class="tag-pills" role="list" aria-label="Edition tags">
+            <span class="tag-pill" role="listitem">automatic</span>
+            <span class="tag-pill" role="listitem">pearl dial</span>
+            <span class="tag-pill" role="listitem">edition 18</span>
+          </div>
+        </div>
+
+        <!-- Lede -->
+        <div class="detail-block detail-lede-block">
+          <p id="detail-lede" class="detail-lede">A pale face and open rotor settle into the room without asking for attention.</p>
+        </div>
+
+        <!-- Key Traits -->
+        <div class="detail-block detail-traits-block">
+          <h2 class="traits-heading">Key traits</h2>
+          <div id="traits-list" class="traits-table" role="table" aria-label="Technical traits">
+            <!-- Row 1: Case -->
+            <div class="trait-row" role="row">
+              <span class="trait-cell-label" role="rowheader">
+                <svg class="icon trait-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0l12.6 12.6z"/><line x1="14.5" x2="12.5" y1="10.5" y2="8.5"/><line x1="11.5" x2="9.5" y1="13.5" y2="11.5"/><line x1="8.5" x2="6.5" y1="16.5" y2="14.5"/><line x1="17.5" x2="15.5" y1="7.5" y2="5.5"/></svg>
+                <span>Case</span>
+              </span>
+              <span class="trait-cell-value" role="cell" id="trait-val-case">39 mm</span>
+            </div>
+            <!-- Row 2: Calibre -->
+            <div class="trait-row" role="row">
+              <span class="trait-cell-label" role="rowheader">
+                <svg class="icon trait-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>
+                <span>Calibre</span>
+              </span>
+              <span class="trait-cell-value" role="cell" id="trait-val-calibre">HV-05</span>
+            </div>
+            <!-- Row 3: Reserve -->
+            <div class="trait-row" role="row">
+              <span class="trait-cell-label" role="rowheader">
+                <svg class="icon trait-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.99 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                <span>Reserve</span>
+              </span>
+              <span class="trait-cell-value" role="cell" id="trait-val-reserve">54 hours</span>
+            </div>
+            <!-- Row 4: Water -->
+            <div class="trait-row" role="row">
+              <span class="trait-cell-label" role="rowheader">
+                <svg class="icon trait-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg>
+                <span>Water</span>
+              </span>
+              <span class="trait-cell-value" role="cell" id="trait-val-water">5 bar</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Wearing Setting -->
+        <div class="detail-block detail-setting-block">
+          <h2 class="setting-heading">Wearing setting</h2>
+          <div class="setting-value-wrap">
+            <svg class="icon setting-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span id="detail-setting" class="setting-value">Low-lit dinner</span>
+          </div>
+        </div>
+
+        <!-- Detail Action & Magnified Movement Crop -->
+        <div class="detail-block detail-action-block">
+          <div class="action-crop-wrap">
+            <button type="button" class="btn-detail-action" id="btn-detail-action">
+              <span id="detail-action-text">See movement detail</span>
+            </button>
+            <div id="movement-crop" class="movement-crop" role="img" aria-label="Magnified movement detail"></div>
+          </div>
+        </div>
+      </article>
+    </aside>
+
+  </div>
+
+  <!-- Vanilla JavaScript Module -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
